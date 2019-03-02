@@ -1,4 +1,4 @@
-/** Assignment 2
+/** Assignment 3
  * @author Andrew Dybka
  * @studentID 101041087
  * 
@@ -11,6 +11,7 @@ public class chef extends Thread implements Runnable{
 	
 	private String name, ingredient ;
 	private Kitchen system;
+	public long time;
 	
 	public chef (String name, String ingredient, Kitchen theSystem) {
 		super(name);
@@ -21,14 +22,17 @@ public class chef extends Thread implements Runnable{
 	
 	
 	//run class to call the make in kitchen system
-	//overrides the default run class in thread
-	@Override
+
 	public void run() {
-		try {
-			system.make(name, ingredient);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		//startTime = System.nanoTime();
+		while(system.count<100000) {
+			try {
+				system.make(this, ingredient);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
+		//endTime = System.nanoTime();
 	}
 
 }

@@ -1,4 +1,4 @@
-/** Assignment 2
+/** Assignment 3
  * @author Andrew Dybka
  * @studentID 101041087
  * 
@@ -30,12 +30,12 @@ public class Kitchen {
 	
 	private static String BREAD="bread", PB = "peanut butter", JAM = "jam";//all ingredients
 	private ArrayList<String> table, ingriedents;
-	private static int count;
+	public int count=0;
 	private Random rand;
 	private boolean empty;//boolean for if table is empty
 	
-	private long startTime, endTime;
-	private boolean starting = true;
+	//private long AgentstartTime, AgentendTime, chefStart, chefEnd;
+	//private boolean starting = true;
 	
 	
 	
@@ -55,13 +55,16 @@ public class Kitchen {
 	}
 	
 	//put class called by agent
-	public void put()throws InterruptedException {
-		while(count<100000) {
+	public void put(Agent theAgent)throws InterruptedException {
+		
 			synchronized(this) {//synch this instance
 				//wait if kitchen is not empty
 				while(!empty) {
 					wait();
 				}
+				
+				//get start execution time
+				long start = System.nanoTime();
 				//clear table, get two ingredients from ingredient list add to table
 				table.clear();
 				for (int i = 0; i < 2; i++) {
@@ -77,62 +80,62 @@ public class Kitchen {
 				System.out.println(count + ": Agent placed ingrdients in the system: "+ table);
 				empty=false;
 				notifyAll();
+				//add total execution time to agent's time
+				theAgent.time+= (System.nanoTime() - start);
 			}
-		}
 		
 	}
 	
 	//make class called by chef
-	public void make(String chefName, String chefIngredient)throws InterruptedException {
-		while(count<100000) {
+	public void make(chef chefName, String chefIngredient)throws InterruptedException {
+	
 			synchronized(this) {//synch this instance of the kitchen
 				//wait if kitchen is empty
 				while(empty) {
 					wait();
 				}
+				//get start execution time
+				long start = System.nanoTime();
 				//determine what chef calls this class an ingredients in kitchen
-				if ((table.contains(BREAD) && (table.contains(PB) && chefIngredient==JAM))) {
+				if ((table.contains(BREAD) && (table.contains(PB)))) {
 					System.out.println("The " + chefName + " spreads on " + chefIngredient + " to finish the sandwich and then he eats it \n");
 					empty = true;
 					notifyAll();
 					count++;
-				} else if ((table.contains(BREAD) && (table.contains(JAM) && chefIngredient==PB))) {
+				} else if ((table.contains(BREAD) && (table.contains(JAM)))) {
 					System.out.println("The " + chefName + " spreads on " + chefIngredient + " to finish the sandwich and then he eats it \n");
 					empty = true;
 					notifyAll();
 					count++;
-				} else if ((table.contains(PB) && (table.contains(JAM) && chefIngredient==BREAD))) {
+				} else if ((table.contains(PB) && (table.contains(JAM)))) {
 					System.out.println("The " + chefName + " uses his " + chefIngredient + " to finish the sandwich and then he eats it \n");
 					empty = true;
 					notifyAll();
 					count++;
 				}
-				
+				//add total execution to threads time
+				chefName.time+=(System.nanoTime()-start);
 			}
 
-		}
-		getTime();
+
 		
 	}
 	public void measure(Thread agentThread, Thread pbThread, Thread breadThread, Thread jamThread) { 
+		
+		
 		Thread[] threadInfos = {agentThread, pbThread, breadThread, jamThread};
 		for (Thread info : threadInfos) {
 			threadInitialCPU.put(info.getId(),
 					threadMxBean.getThreadCpuTime(info.getId()));
 		}
- 	
 		try {
-			Thread.sleep(sampleTime);
+			Thread.sleep(4000);
 		} catch (InterruptedException e) {
 		}
- 
+ 	
 		long upTime = runtimeMxBean.getUptime();
  
 		Map<Long, Long> threadCurrentCPU = new HashMap<Long, Long>();
-		threadInfos[0] = agentThread;
-		threadInfos[1]= pbThread;
-		threadInfos[2] = breadThread;
-		threadInfos[3] = jamThread;
 		for (Thread info : threadInfos) {
 			threadCurrentCPU.put(info.getId(),
 					threadMxBean.getThreadCpuTime(info.getId()));
@@ -144,38 +147,33 @@ public class Kitchen {
 		//long nrCPUs = 1;
 		// elapsedTime is in ms.
 		long elapsedTime = (upTime - initialUptime);
-		for (Thread info : threadInfos) { 
+		for (Thread info : threadInfos) {
 			// elapsedCpu is in ns
-			Long initialCPU = threadInitialCPU.get(info.getId());
-			if (initialCPU != null) {
+			//Long initialCPU = threadInitialCPU.get(info.getId());
+			//if (initialCPU != null) {
 				float elapsedCpu = threadCurrentCPU.get(info.getId())
-						- initialCPU;
+						- threadInitialCPU.get(info.getId());
+				//System.out.println(elapsedCpu + " = " + threadCurrentCPU.get(info.getId()) + " - " + threadInitialCPU.get(info.getId()));
 				float cpuUsage = elapsedCpu * 100/ (elapsedTime * 1000000F * nrCPUs);
 				threadCPUUsage.put(info.getId(), cpuUsage);
-			}
+			//}
 		}
- 
-		// threadCPUUsage contains cpu % per thread
+		try {
+			Thread.sleep(6000);
+		} catch (InterruptedException e) {
+		}
+		
 		for (Thread info : threadInfos) {
 			System.out.println(info.getName()+ ":       "+ info.getId());
 		}
+		
 		System.out.println(threadCPUUsage);
+ 
+
 		// You can use osMxBean.getThreadInfo(theadId) to get information on
 		// every thread reported in threadCPUUsage and analyze the most CPU
 		// intentive threads
  
-	}
-	private long getTime() {
-		if(starting) {
-			startTime = System.nanoTime();
-			starting = false;
-			return startTime;
-		}
-		else {
-			
-			endTime = System.nanoTime();
-			return endTime - startTime;
-		}
 	}
 	
 	
@@ -187,17 +185,19 @@ public class Kitchen {
 		chef breadMaker = new chef("breadChef", BREAD, system);
 		chef PBMaker = new chef("PBChef", PB, system);
 		chef JAMMaker = new chef("JamChef", JAM, system);
-		//initialize count
-		count = 0;
 		//start threads
-		system.getTime();
-		System.out.println("Threads about to start. Current Time is: " + system.startTime);
 		agent.start();
 		breadMaker.start();
 		PBMaker.start();
 		JAMMaker.start();
-		new Kitchen().measure(agent, PBMaker, breadMaker, JAMMaker);
-		System.out.println("total process run time was " + (system.endTime - system.startTime) + "ns or " + (system.endTime - system.startTime)/1000000000 + "s");
+		new Kitchen().measure(agent, breadMaker, PBMaker, JAMMaker);
+		System.out.println("Bread Chef Proccess " + (breadMaker.time) + "ns or " + (breadMaker.time)/1000000000 + "s");
+		System.out.println("PB Chef Proccess " + (PBMaker.time) + "ns or " + (PBMaker.time)/1000000000 + "s");
+		System.out.println("Jam Chef Proccess " + (JAMMaker.time) + "ns or " + (JAMMaker.time)/1000000000 + "s");
+		System.out.println("Agent Proccess " + (agent.time) + "ns or " + (agent.time) /1000000000 + "s");
+		//System.exit(0);
+		
+
 		
 	}
 	
