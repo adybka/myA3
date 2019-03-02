@@ -7,7 +7,7 @@
 
 package myAssignment2;
 
-public class chef extends Thread{
+public class chef extends Thread implements Runnable{
 	
 	private String name, ingredient ;
 	private Kitchen system;

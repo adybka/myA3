@@ -8,7 +8,7 @@
 package myAssignment2;
 
 
-public class Agent extends Thread{
+public class Agent extends Thread implements Runnable{
 	
 	private Kitchen system;
 	

@@ -34,6 +34,9 @@ public class Kitchen {
 	private Random rand;
 	private boolean empty;//boolean for if table is empty
 	
+	private long startTime, endTime;
+	private boolean starting = true;
+	
 	
 	
 	public Kitchen(){
@@ -53,7 +56,7 @@ public class Kitchen {
 	
 	//put class called by agent
 	public void put()throws InterruptedException {
-		while(count<20) {
+		while(count<100000) {
 			synchronized(this) {//synch this instance
 				//wait if kitchen is not empty
 				while(!empty) {
@@ -81,7 +84,7 @@ public class Kitchen {
 	
 	//make class called by chef
 	public void make(String chefName, String chefIngredient)throws InterruptedException {
-		while(count<20) {
+		while(count<100000) {
 			synchronized(this) {//synch this instance of the kitchen
 				//wait if kitchen is empty
 				while(empty) {
@@ -108,6 +111,7 @@ public class Kitchen {
 			}
 
 		}
+		getTime();
 		
 	}
 	public void measure(Thread agentThread, Thread pbThread, Thread breadThread, Thread jamThread) { 
@@ -116,7 +120,7 @@ public class Kitchen {
 			threadInitialCPU.put(info.getId(),
 					threadMxBean.getThreadCpuTime(info.getId()));
 		}
- 
+ 	
 		try {
 			Thread.sleep(sampleTime);
 		} catch (InterruptedException e) {
@@ -125,7 +129,10 @@ public class Kitchen {
 		long upTime = runtimeMxBean.getUptime();
  
 		Map<Long, Long> threadCurrentCPU = new HashMap<Long, Long>();
-		//threadInfos = threadMxBean.dumpAllThreads(false, false);
+		threadInfos[0] = agentThread;
+		threadInfos[1]= pbThread;
+		threadInfos[2] = breadThread;
+		threadInfos[3] = jamThread;
 		for (Thread info : threadInfos) {
 			threadCurrentCPU.put(info.getId(),
 					threadMxBean.getThreadCpuTime(info.getId()));
@@ -158,6 +165,18 @@ public class Kitchen {
 		// intentive threads
  
 	}
+	private long getTime() {
+		if(starting) {
+			startTime = System.nanoTime();
+			starting = false;
+			return startTime;
+		}
+		else {
+			
+			endTime = System.nanoTime();
+			return endTime - startTime;
+		}
+	}
 	
 	
 	public static void main(String[] args) {
@@ -171,11 +190,14 @@ public class Kitchen {
 		//initialize count
 		count = 0;
 		//start threads
+		system.getTime();
+		System.out.println("Threads about to start. Current Time is: " + system.startTime);
 		agent.start();
 		breadMaker.start();
 		PBMaker.start();
 		JAMMaker.start();
-		system.measure(agent, PBMaker, breadMaker, JAMMaker);
+		new Kitchen().measure(agent, PBMaker, breadMaker, JAMMaker);
+		System.out.println("total process run time was " + (system.endTime - system.startTime) + "ns or " + (system.endTime - system.startTime)/1000000000 + "s");
 		
 	}
 	
